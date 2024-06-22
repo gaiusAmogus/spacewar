@@ -1,34 +1,91 @@
 import * as THREE from '/assets/vendor/three.js-dev/build/three.module.js';
+import { GLTFLoader } from '/assets/vendor/three.js-dev/loaders/GLTFLoader.js';
 
 export function createAsteroids(scene) {
     const asteroids = new THREE.Group();
 
     const asteroidCount = 50;
-    const minSize = 5;
-    const maxSize = 30;
+    const minSize = 1;
+    const maxSize = 10;
+    const minDistanceFromCenter = 50;
 
-    const asteroidMaterial = new THREE.MeshBasicMaterial({ color: 0xa0a0a0 });
+    // Funkcja do generowania losowej pozycji asteroidy
+    function generateRandomPosition() {
+        let posX, posY, posZ;
+        do {
+            posX = Math.random() * 400 - 200; // Pozycja od -200 do 200 w każdym wymiarze
+            posY = Math.random() * 400 - 200;
+            posZ = Math.random() * 400 - 200;
+        } while (Math.sqrt(posX * posX + posY * posY + posZ * posZ) < minDistanceFromCenter); // Minimalna odległość od punktu (0, 0, 0)
 
+        return new THREE.Vector3(posX, posY, posZ);
+    }
+
+    const loader = new GLTFLoader();
+
+    // Ładowanie modeli asteroid z plików GLB
+    const asteroidModels = [
+        'assets/vendor/models/planets/Planet_1.glb',
+        'assets/vendor/models/planets/Planet_2.glb',
+        'assets/vendor/models/planets/Planet_3.glb',
+    ];
+
+    // Funkcja do losowego wyboru modelu asteroidy
+    function getRandomAsteroidModel() {
+        const index = Math.floor(Math.random() * asteroidModels.length);
+        return asteroidModels[index];
+    }
+
+    // Funkcja do generowania losowego rozmiaru asteroidy
+    function getRandomSize() {
+        return Math.random() * (maxSize - minSize) + minSize;
+    }
+
+    // Dodawanie asteroid do sceny
     for (let i = 0; i < asteroidCount; i++) {
-        const asteroidSize = Math.random() * (maxSize - minSize) + minSize;
+        const randomPosition = generateRandomPosition();
+        const asteroidModelPath = getRandomAsteroidModel();
+        const asteroidSize = getRandomSize();
 
-        const asteroidGeometry = new THREE.SphereGeometry(asteroidSize, 16, 16);
-        const asteroidMesh = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
+        loader.load(
+            asteroidModelPath,
+            (gltf) => {
+                const asteroid = gltf.scene;
 
-        asteroidMesh.userData.collider = new THREE.Sphere(new THREE.Vector3(), asteroidSize);
+                // Skalowanie asteroidy
+                asteroid.scale.set(asteroidSize, asteroidSize, asteroidSize);
 
-        const posX = Math.random() * 400 - 200;
-        const posY = Math.random() * 400 - 200;
-        const posZ = Math.random() * 400 - 200;
-        asteroidMesh.position.set(posX, posY, posZ);
+                // Ustawienie pozycji asteroidy
+                asteroid.position.copy(randomPosition);
 
-        asteroids.add(asteroidMesh);
+                // Obliczenie granic kolidy
+                const bbox = new THREE.Box3().setFromObject(asteroid);
+                const size = new THREE.Vector3();
+                bbox.getSize(size);
+
+                // Ustawienie kolidy jako sfera o średnicy równym największemu wymiarowi modelu
+                const radius = Math.max(size.x, size.y, size.z) / 2;
+                const collider = new THREE.Sphere(randomPosition, radius);
+
+                // Przypisanie kolidy do danych użytkownika
+                asteroid.userData.collider = collider;
+
+                // Dodanie asteroidy do grupy
+                asteroids.add(asteroid);
+            },
+            undefined,
+            (error) => {
+                console.error('Failed to load asteroid model:', error);
+            }
+        );
     }
 
     scene.add(asteroids);
 
     return asteroids;
 }
+
+
 
 export function isInsideAsteroid(asteroids, x, y, z, minDistance) {
     for (let asteroid of asteroids.children) {

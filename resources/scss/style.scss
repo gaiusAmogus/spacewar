@@ -1,14 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
 html, body{
     margin: 0;
+    font-family: "VT323", monospace;
+    font-weight: 400;
+    font-style: normal;
+    color: #ffffff;
+}
+h1,h2,h3,h4,h5,p,span{
+    margin: 0;
+    padding: 0;
 }
 .scoresTable{
     position: fixed;
-    top: 0;
-    right: 0;
+    bottom: 0;
+    left: 0;
     padding: 20px 30px;
-    background: #ffffff;
-    color: #000;
+    background: rgba(0,0,0,0.5);
     width: fit-content;
+
+    &__info{
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding-bottom: 20px;
+        border-bottom: 2px dotted #fff;
+        margin-bottom: 20px;
+        h3{
+            font-size: 30px;
+        }
+        p{
+            font-size: 20px;
+        }
+    }
+    &__playerScore{
+        font-size: 40px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    &__playerLife{
+        font-size: 40px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        span{
+            display: block;
+            width: fit-content;
+            height: fit-content;
+            svg{
+                width: 40px;
+                height: auto;
+                path{
+                    fill: transparent;
+                    stroke: #fff;
+                }
+            }
+        }
+    }
 }
 
 .gameOver {
@@ -22,10 +72,17 @@ html, body{
 
     flex-direction: column;
     gap: 15px;
-    text-shadow: 3px 3px black;
+    text-shadow: 6px 6px black;
 
     color: white;
     text-align: center;
     font-size: 48px;
+
+    h3{
+        font-size: 60px;
+    }
+    h2{
+        font-size: 100px;
+    }
 
 }
