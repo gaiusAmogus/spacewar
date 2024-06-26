@@ -17,7 +17,6 @@ export function createPlayer(camera) {
             const size = new THREE.Vector3();
             bbox.getSize(size);
 
-            // Oblicz skalę, aby szerokość modelu była 2.5 jednostki
             const desiredWidth = 4;
             const scale = desiredWidth / size.x;
             spaceship.scale.set(scale, scale, scale);
@@ -59,7 +58,7 @@ export function createPlayer(camera) {
     player.add(light);
 
     camera.position.z = 5;
-    camera.position.y = 1.5;
+    camera.position.y = 1.3;
     camera.lookAt(player.position);
 
     // Dodaj kamerę do grupy gracza
@@ -72,4 +71,48 @@ export function playPlayerShotSound() {
     const playerShotSound = new Audio('assets/sounds/playerShot.mp3');
     playerShotSound.volume = 0.3;
     playerShotSound.play();
+}
+export function createBullet(player, bullets, scene) {
+    // Utworzenie geometrii walca
+    const bulletGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 16);
+    const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0x32AAE1 });
+    const bulletMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
+
+    // Ustawienie pozycji na pozycji gracza
+    bulletMesh.position.copy(player.position);
+
+    // Ustawienie rotacji
+    // Kierunek pocisku to kierunek wektora ruchu gracza
+    bulletMesh.quaternion.copy(player.quaternion);
+
+    const light = new THREE.PointLight(0x3333ff, .5);
+    light.position.set(0, 1, 1); // Przesunięcie światła do tyłu modelu
+    bulletMesh.add(light);
+
+    // Dodanie pocisku do listy pocisków
+    bullets.push(bulletMesh);
+
+    // Dodanie pocisku do sceny
+    scene.add(bulletMesh);
+
+    playPlayerShotSound();
+
+    setTimeout(() => {
+        bulletMesh.remove(light); // Usunięcie światła z pocisku po .1 s bo zasoby żre
+    }, 100); 
+}
+export function addTemporaryRedLight(player) {
+    const redLight = new THREE.PointLight(0xff3333, 1); // Światło czerwone
+    redLight.position.set(0, 1, 1); // Przesunięcie światła do tyłu modelu
+
+    player.add(redLight); // Dodaj światło do grupy gracza
+
+    // Usunięcie światła po 0.3 sekundy
+    setTimeout(() => {
+        player.remove(redLight); // Usunięcie światła z grupy gracza
+    }, 100); // Czas w milisekundach (0.3 sekundy = 300 milisekund)
+
+    const explosionSound = new Audio('assets/sounds/playerHit.mp3');
+    explosionSound.volume = 1;
+    explosionSound.play();
 }

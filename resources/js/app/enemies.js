@@ -36,7 +36,7 @@ export function createEnemy(scene, asteroids, player) {
             const size = new THREE.Vector3();
             bbox.getSize(size);
 
-            const desiredWidth = 7;
+            const desiredWidth = 3;
             const scale = desiredWidth / size.x;
             enemyModel.scale.set(scale, scale, scale);
             enemyModel.position.set(0, 0, 0);
@@ -45,30 +45,59 @@ export function createEnemy(scene, asteroids, player) {
             enemy.add(enemyModel);
             enemy.ready = true;
             
-            enemy.shoot = function() {
+            // Funkcja, która będzie odpowiedzialna za strzelanie przeciwnika
+            enemy.shoot = function(camera) {
                 const bulletGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1, 8); // Promień początkowy, promień końcowy, wysokość, liczba segmentów
                 const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
                 const bulletMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-            
+
                 // Pobierz pozycję pocisku z odpowiedniego miejsca na modelu przeciwnika
                 const bulletStartPosition = new THREE.Vector3();
                 enemyModel.getWorldPosition(bulletStartPosition);
                 bulletMesh.position.copy(bulletStartPosition);
-            
+
                 // Ustaw kierunek strzału w kierunku gracza
                 const direction = new THREE.Vector3().subVectors(player.position, bulletStartPosition).normalize();
                 bulletMesh.setRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize()));
-            
+
                 // Przypisz kierunek pociskowi
                 bulletMesh.userData = { 
                     direction: direction.clone() 
                 };
-            
+
+                // Obróć model przeciwnika w kierunku strzału
+                const enemyDirection = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), direction);
+                enemyModel.quaternion.copy(enemyDirection);
+
                 // Dodaj pocisk do sceny i do listy pocisków przeciwnika
                 enemy.userData.bullets.push(bulletMesh);
                 scene.add(bulletMesh);
-                playEnemyShotSound();
+
+                // Dodaj dźwięk przestrzenny do pocisku
+                addPositionalAudioToBullet(bulletMesh, camera);
             };
+
+            function addPositionalAudioToBullet(bulletMesh, camera) {
+                // Utwórz listener dla dźwięku
+                const listener = new THREE.AudioListener();
+                camera.add(listener);
+
+                // Załaduj dźwięk za pomocą AudioLoader
+                const audioLoader = new THREE.AudioLoader();
+                audioLoader.load('assets/sounds/enemyShot.mp3', function(buffer) {
+                    // Utwórz PositionalAudio i przypisz do niego załadowany dźwięk
+                    const sound = new THREE.PositionalAudio(listener);
+                    sound.setBuffer(buffer);
+                    sound.setRefDistance(20);  // Ustaw odległość, z jakiej dźwięk będzie słyszalny
+                    sound.setVolume(.7);
+                    sound.play();
+
+                    // Dodaj dźwięk do pocisku
+                    bulletMesh.add(sound);
+                });
+            }
+
+            
         },
         undefined,
         (error) => {
@@ -105,8 +134,3 @@ export function createEnemy(scene, asteroids, player) {
     return enemy;
 }
 
-export function playEnemyShotSound() {
-    const enemyShotSound = new Audio('assets/sounds/enemyShot.mp3');
-    enemyShotSound.volume = 0.1;
-    enemyShotSound.play();
-}

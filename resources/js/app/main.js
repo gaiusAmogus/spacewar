@@ -1,7 +1,8 @@
 import * as THREE from '/assets/vendor/three.js-dev/build/three.module.js';
+import { setupSoundtrack, explosionSound } from './functions.js';
 import { createAsteroids } from './asteroids.js';
 import { createEnemy } from './enemies.js';
-import { createPlayer, playPlayerShotSound } from './player.js';
+import { createPlayer, createBullet, addTemporaryRedLight } from './player.js';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -18,8 +19,8 @@ const backgroundSphere = new THREE.Mesh(
 scene.add(backgroundSphere);
 
 // Dodanie światła kierunkowego (słonecznego)
-const sunlight = new THREE.DirectionalLight(0xffffff, 1); // Kolor biały, intensywność 1
-sunlight.position.set(0, 1, 0); // Ustawienie pozycji światła (np. nad sceną)
+const sunlight = new THREE.DirectionalLight(0xffffff, 1.2); // Kolor biały, intensywność 1
+sunlight.position.set(2, -2, 0); // Ustawienie pozycji światła (np. nad sceną)
 scene.add(sunlight);
 
 const baseSpeed = .25;
@@ -33,63 +34,19 @@ scene.add(player);
 
 const keys = {};
 const bullets = [];
-let playerScore = 0; // Licznik trafionych przeciwników
-let playerLives = 3; // Życie gracza
+let playerScore = 0;
+let playerLives = 3;
 const scoresTable = document.querySelector('.scoresTable');
 const playerLifeSpans = document.querySelectorAll('.scoresTable__playerLife span');
 const gameOverScreen = document.querySelector('.gameOver');
 let gamePaused = false;
 
-document.addEventListener('keydown', (event) => {
-    keys[event.code] = true;
-    updatePlayerSpeed();
-});
+const asteroids = createAsteroids(scene);
 
-document.addEventListener('keyup', (event) => {
-    keys[event.code] = false;
-    updatePlayerSpeed();
-});
-
-function updatePlayerSpeed() {
-    if (keys['ShiftLeft'] || keys['ShiftRight']) {
-        playerSpeed = boostedSpeed;
-    } else if (keys['KeyR']) {
-        playerSpeed = slowSpeed;
-    } else {
-        playerSpeed = baseSpeed;
-    }
-}
-
-function createBullet() {
-    // Utworzenie geometrii walca
-    const bulletGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 16);
-    const bulletMaterial = new THREE.MeshBasicMaterial({ color: 0x32AAE1});
-    const bulletMesh = new THREE.Mesh(bulletGeometry, bulletMaterial);
-
-    // Ustawienie pozycji na pozycji gracza
-    bulletMesh.position.copy(player.position);
-
-    // Ustawienie rotacji
-    // Kierunek pocisku to kierunek wektora ruchu gracza
-    bulletMesh.quaternion.copy(player.quaternion);
-
-    const light = new THREE.PointLight(0x3333ff, .5);
-    light.position.set(0, 1, 1); // Przesunięcie światła do tyłu modelu
-    bulletMesh.add(light);
-
-    // Dodanie pocisku do listy pocisków
-    bullets.push(bulletMesh);
-    
-
-    // Dodanie pocisku do sceny
-    scene.add(bulletMesh);
-
-    playPlayerShotSound();
-}
-function explosionSound() {
-    const explosionSound = new Audio('assets/sounds/explosion.mp3');
-    explosionSound.volume = 0.2;
-    explosionSound.play();
+const enemies = [];
+for (let i = 0; i < 15; i++) {
+    const enemy = createEnemy(scene, asteroids, player);
+    enemies.push(enemy);
 }
 
 function checkCollisions() {
@@ -104,8 +61,7 @@ function checkCollisions() {
             // Sprawdzenie kolizji Box vs Sphere
             const playerToAsteroidDistance = playerBox.distanceToPoint(asteroidMesh.position);
             if (playerToAsteroidDistance < asteroidSphere.radius) {
-                console.log('Kolizja z asteroidą!');
-                endGame(); // Koniec gry po kolizji z asteroidą
+                endGame();
             }
         });
     });
@@ -142,99 +98,6 @@ function checkCollisions() {
     });
 }
 
-
-function animate() {
-    if (gamePaused) return; // Pauzowanie gry
-
-    requestAnimationFrame(animate);
-
-    player.translateZ(-playerSpeed);
-
-    if (keys['ArrowUp'] || keys['KeyS']) {
-        player.rotateX(-rotationSpeed);
-    }
-    if (keys['ArrowDown'] || keys['KeyW']) {
-        player.rotateX(rotationSpeed);
-    }
-    if (keys['ArrowLeft'] || keys['KeyA']) {
-        player.rotateY(rotationSpeed);
-    }
-    if (keys['ArrowRight'] || keys['KeyD']) {
-        player.rotateY(-rotationSpeed);
-    }
-    if (keys['KeyQ']) {
-        player.rotateZ(rotationSpeed);
-    }
-    if (keys['KeyE']) {
-        player.rotateZ(-rotationSpeed);
-    }
-    if (keys['Space']) {
-        createBullet();
-        keys['Space'] = false;
-    }
-
-    bullets.forEach((bullet, index) => {
-        bullet.translateZ(-2);
-        if (bullet.position.z < -400) {
-            scene.remove(bullet);
-            bullets.splice(index, 1);
-        }
-    });
-
-    const now = performance.now();
-
-    enemies.forEach(enemy => {
-        if (!enemy.ready) return; // Jeśli model nie jest jeszcze gotowy, pomiń ten przeciwnik
-
-        if (now - enemy.userData.lastShot > 1000 + Math.random() * 1000) { // Randomize shooting intervals
-            enemy.shoot();
-            enemy.userData.lastShot = now;
-        }
-
-        enemy.userData.bullets.forEach((bullet, index) => {
-            bullet.position.add(bullet.userData.direction.clone().multiplyScalar(0.5));
-            if (bullet.position.distanceTo(player.position) < 0.5) {
-                console.log('Player hit!');
-                scene.remove(bullet);
-                enemy.userData.bullets.splice(index, 1);
-                updatePlayerLife(); // Odejmowanie życia gracza po trafieniu
-            }
-            if (bullet.position.distanceTo(enemy.position) > 500) {
-                scene.remove(bullet);
-                enemy.userData.bullets.splice(index, 1);
-            }
-        });
-    });
-
-    checkCollisions();
-
-    renderer.render(scene, camera);
-}
-
-
-const asteroids = createAsteroids(scene);
-
-const enemies = [];
-for (let i = 0; i < 15; i++) {
-    const enemy = createEnemy(scene, asteroids, player);
-    enemies.push(enemy);
-}
-
-
-
-document.addEventListener('keydown', (event) => {
-    keys[event.code] = true;
-    updatePlayerSpeed();
-    if (event.code === 'Enter' && gamePaused) {
-        restartGame();
-    }
-});
-
-document.addEventListener('keyup', (event) => {
-    keys[event.code] = false;
-    updatePlayerSpeed();
-});
-
 function restartGame() {
     // Reset player position
     player.position.set(0, 0, 0);
@@ -259,7 +122,7 @@ function restartGame() {
     enemies.length = 0;
 
     // Recreate enemies
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 7; i++) {
         const enemy = createEnemy(scene, asteroids, player);
         enemies.push(enemy);
     }
@@ -278,6 +141,7 @@ function updatePlayerScore() {
 }
 
 function updatePlayerLife() {
+    addTemporaryRedLight(player);
     playerLives--;
     if (playerLives < 1) {
         playerLives = 0; // Zabezpieczenie przed ujemnym życiem
@@ -285,10 +149,8 @@ function updatePlayerLife() {
     }
     updateLifeDisplay();
 }
-
-
-function updateLifeDisplay() {
-    var svg = `
+function updateLifeDisplay(){
+        var svg = `
         <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M2 9.1371C2 14 6.01943 16.5914 8.96173 18.9109C10 19.7294 11 20.5 12 20.5C13 20.5 14 19.7294 15.0383 18.9109C17.9806 16.5914 22 14 22 9.1371C22 4.27416 16.4998 0.825464 12 5.50063C7.50016 0.825464 2 4.27416 2 9.1371Z" fill="#1C274C"/>
         </svg>
@@ -301,35 +163,156 @@ function updateLifeDisplay() {
         }
     });
 }
-
 function endGame() {
-    explosionSound();
+
+    const explosionSound = new Audio('assets/sounds/playerDead.mp3');
+    explosionSound.volume = 1;
+    explosionSound.play();
+
     gamePaused = true; // Pauzowanie gry
     gameOverScreen.style.display = 'flex'; // Wyświetlenie ekranu game over
 }
 
-function startSoundtrack() {
-    const soundtrack = new Audio('assets/sounds/soundtrack.mp3');
-    soundtrack.volume = 0.7;
-    soundtrack.loop = true; // Odtwarzanie w pętli
+function updatePlayerSpeed() {
 
-    // Odtworzenie dźwięku z obsługą błędów
-    soundtrack.play().catch(error => {
-        console.error('Audio playback failed:', error);
-    });
+    // Definicja zmiennych globalnych (lub dostępnych w odpowiednim zakresie)
+    let targetCameraPositionZ = camera.position.z; // Inicjalnie ustawiamy docelową pozycję kamery na jej aktualną pozycję
+    const animationDuration = 700; // Czas trwania animacji w milisekundach
+    let animationStartTime = null; // Czas rozpoczęcia animacji
+
+    function startCameraAnimation(targetZ) {
+        // Ustawiamy nową docelową pozycję kamery
+        targetCameraPositionZ = targetZ;
+    
+        // Rozpoczynamy animację tylko jeśli zmienia się pozycja kamery
+        if (camera.position.z !== targetCameraPositionZ) {
+            animationStartTime = performance.now(); // Ustalamy czas rozpoczęcia animacji
+    
+            // Rozpoczynamy animację przy użyciu requestAnimationFrame
+            requestAnimationFrame(animateCameraPosition);
+        }
+    }
+    
+    function animateCameraPosition(currentTime) {
+        if (!animationStartTime) {
+            animationStartTime = currentTime;
+        }
+    
+        const elapsedTime = currentTime - animationStartTime;
+        const progress = Math.min(elapsedTime / animationDuration, 1); // Postęp animacji jako wartość z zakresu [0, 1]
+    
+        // Interpolacja pozycji kamery
+        const currentPositionZ = camera.position.z;
+        const newPositionZ = currentPositionZ * (1 - progress) + targetCameraPositionZ * progress;
+        camera.position.z = newPositionZ;
+    
+        // Kontynuujemy animację, jeśli nie osiągnęliśmy jeszcze końca
+        if (progress < 1) {
+            requestAnimationFrame(animateCameraPosition);
+        } else {
+            animationStartTime = null; // Resetujemy czas rozpoczęcia animacji po jej zakończeniu
+        }
+    }
+
+    if (keys['ShiftLeft'] || keys['ShiftRight']) {
+        playerSpeed = boostedSpeed;
+        startCameraAnimation(6);
+    } else if (keys['KeyR']) {
+        playerSpeed = slowSpeed;
+        startCameraAnimation(4);
+    } else {
+        playerSpeed = baseSpeed;
+        startCameraAnimation(5);
+    }
 }
 
-// Funkcja nasłuchująca pierwszej interakcji użytkownika
-function setupSoundtrack() {
-    const playSoundtrackOnInteraction = () => {
-        startSoundtrack();
-        // Usunięcie nasłuchiwania po pierwszej interakcji
-        document.removeEventListener('click', playSoundtrackOnInteraction);
-        document.removeEventListener('keydown', playSoundtrackOnInteraction);
-    };
+document.addEventListener('keydown', (event) => {
+    keys[event.code] = true;
+    updatePlayerSpeed();
+    if (event.code === 'Enter' && gamePaused) {
+        restartGame();
+    }
+});
 
-    document.addEventListener('click', playSoundtrackOnInteraction);
-    document.addEventListener('keydown', playSoundtrackOnInteraction);
+document.addEventListener('keyup', (event) => {
+    keys[event.code] = false;
+    updatePlayerSpeed();
+});
+
+function animate() {
+    if (gamePaused) return; // Pauzowanie gry
+
+    requestAnimationFrame(animate);
+
+    // Aktualizacja ruchu gracza
+    player.translateZ(-playerSpeed);
+
+    if (keys['ArrowUp'] || keys['KeyS']) {
+        player.rotateX(-rotationSpeed);
+    }
+    if (keys['ArrowDown'] || keys['KeyW']) {
+        player.rotateX(rotationSpeed);
+    }
+    if (keys['ArrowLeft'] || keys['KeyA']) {
+        player.rotateY(rotationSpeed);
+    }
+    if (keys['ArrowRight'] || keys['KeyD']) {
+        player.rotateY(-rotationSpeed);
+    }
+    if (keys['KeyQ']) {
+        player.rotateZ(rotationSpeed);
+    }
+    if (keys['KeyE']) {
+        player.rotateZ(-rotationSpeed);
+    }
+    if (keys['Space']) {
+        createBullet(player, bullets, scene);
+        keys['Space'] = false;
+    }
+
+    // Aktualizacja pozycji backgroundSphere
+    backgroundSphere.position.copy(player.position);
+
+    // Aktualizacja ruchu pocisków
+    bullets.forEach((bullet, index) => {
+        bullet.translateZ(-2);
+        if (bullet.position.z < -250) {
+            scene.remove(bullet);
+            bullets.splice(index, 1);
+        }
+    });
+
+    const now = performance.now();
+
+    // Strzelanie przeciwników
+    enemies.forEach(enemy => {
+        if (!enemy.ready) return; // Jeśli model nie jest jeszcze gotowy, pomiń ten przeciwnik
+
+        if (now - enemy.userData.lastShot > 500 + Math.random() * 500) { // Randomize shooting intervals
+            enemy.shoot(camera);
+            enemy.userData.lastShot = now;
+        }
+
+        // Aktualizacja ruchu pocisków przeciwników
+        enemy.userData.bullets.forEach((bullet, index) => {
+            bullet.position.add(bullet.userData.direction.clone().multiplyScalar(0.5));
+            if (bullet.position.distanceTo(player.position) < 0.5) {
+                scene.remove(bullet);
+                enemy.userData.bullets.splice(index, 1);
+                updatePlayerLife(); // Odejmowanie życia gracza po trafieniu
+            }
+            if (bullet.position.distanceTo(enemy.position) > 150) {
+                scene.remove(bullet);
+                enemy.userData.bullets.splice(index, 1);
+            }
+        });
+    });
+
+    // Sprawdzenie kolizji
+    checkCollisions();
+
+    // Renderowanie sceny
+    renderer.render(scene, camera);
 }
 
 setupSoundtrack();
