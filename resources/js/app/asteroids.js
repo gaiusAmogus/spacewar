@@ -16,14 +16,13 @@ export function createAsteroids(scene) {
             posX = Math.random() * 400 - 200; // Pozycja od -200 do 200 w każdym wymiarze
             posY = Math.random() * 400 - 200;
             posZ = Math.random() * 400 - 200;
-        } while (Math.sqrt(posX * posX + posY * posY + posZ * posZ) < minDistanceFromCenter); // Minimalna odległość od punktu (0, 0, 0)
+        } while (Math.sqrt(posX * posX + posY * posY + posZ * posZ) < minDistanceFromCenter); // Minimalna odległość od punktu startowego
 
         return new THREE.Vector3(posX, posY, posZ);
     }
 
     const loader = new GLTFLoader();
 
-    // Ładowanie modeli asteroid z plików GLB
     const asteroidModels = [
         'assets/vendor/models/planets/Planet_1.glb',
         'assets/vendor/models/planets/Planet_2.glb',
@@ -52,25 +51,15 @@ export function createAsteroids(scene) {
             (gltf) => {
                 const asteroid = gltf.scene;
 
-                // Skalowanie asteroidy
                 asteroid.scale.set(asteroidSize, asteroidSize, asteroidSize);
-
-                // Ustawienie pozycji asteroidy
                 asteroid.position.copy(randomPosition);
-
-                // Obliczenie granic kolidy
                 const bbox = new THREE.Box3().setFromObject(asteroid);
                 const size = new THREE.Vector3();
                 bbox.getSize(size);
-
-                // Ustawienie kolidy jako sfera o średnicy równym największemu wymiarowi modelu
                 const radius = Math.max(size.x, size.y, size.z) / 2;
                 const collider = new THREE.Sphere(randomPosition, radius);
-
-                // Przypisanie kolidy do danych użytkownika
                 asteroid.userData.collider = collider;
 
-                // Dodanie asteroidy do grupy
                 asteroids.add(asteroid);
             },
             undefined,
@@ -84,7 +73,6 @@ export function createAsteroids(scene) {
 
     return asteroids;
 }
-
 
 
 export function isInsideAsteroid(asteroids, x, y, z, minDistance) {

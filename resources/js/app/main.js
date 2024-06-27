@@ -13,14 +13,14 @@ document.body.appendChild(renderer.domElement);
 const textureLoader = new THREE.TextureLoader();
 const backgroundTexture = textureLoader.load('assets/img/background.jpg'); 
 const backgroundSphere = new THREE.Mesh(
-    new THREE.SphereGeometry(500, 32, 32), // Duża sfera, aby otoczyć całą scenę
-    new THREE.MeshBasicMaterial({ map: backgroundTexture, side: THREE.BackSide }) // Użyj tekstury jako tła
+    new THREE.SphereGeometry(500, 32, 32),
+    new THREE.MeshBasicMaterial({ map: backgroundTexture, side: THREE.BackSide }) 
 );
 scene.add(backgroundSphere);
 
-// Dodanie światła kierunkowego (słonecznego)
-const sunlight = new THREE.DirectionalLight(0xffffff, 1.2); // Kolor biały, intensywność 1
-sunlight.position.set(2, -2, 0); // Ustawienie pozycji światła (np. nad sceną)
+// Dodanie światła kierunkowego
+const sunlight = new THREE.DirectionalLight(0xffffff, 1.2); 
+sunlight.position.set(2, -2, 0); 
 scene.add(sunlight);
 
 const baseSpeed = .25;
@@ -44,6 +44,7 @@ let gamePaused = false;
 const asteroids = createAsteroids(scene);
 
 const enemies = [];
+//liczba przeciwników
 for (let i = 0; i < 15; i++) {
     const enemy = createEnemy(scene, asteroids, player);
     enemies.push(enemy);
@@ -66,11 +67,11 @@ function checkCollisions() {
         });
     });
 
-    // Sprawdzenie kolizji przeciwników z pociskami gracza oraz z główną bryłą gracza
+    // Sprawdzenie kolizji przeciwników z pociskami gracza oraz z graczem
     enemies.forEach(enemy => {
         if (!enemy.ready) return; // Jeśli model nie jest jeszcze gotowy, pomiń ten przeciwnik
 
-        const enemyMesh = enemy.children[0]; // Zakładamy, że pierwsze dziecko przeciwnika to jego geometryczna bryła
+        const enemyMesh = enemy.children[0];
         const enemyBox = new THREE.Box3().setFromObject(enemyMesh);
 
         bullets.forEach((bullet, index) => {
@@ -91,47 +92,39 @@ function checkCollisions() {
             const playerBox = new THREE.Box3().setFromObject(playerMesh);
 
             if (enemyBox.intersectsBox(playerBox)) {
-                console.log('Kolizja z przeciwnikiem!');
-                endGame(); // Koniec gry po kolizji z przeciwnikiem
+                endGame(); 
             }
         });
     });
 }
 
 function restartGame() {
-    // Reset player position
     player.position.set(0, 0, 0);
     player.rotation.set(0, 0, 0);
     playerSpeed = baseSpeed;
 
-    // Reset player score and lives
     playerScore = -1;
     playerLives = 3;
     updatePlayerScore();
     updateLifeDisplay();
 
-    // Remove existing bullets
     bullets.forEach(bullet => scene.remove(bullet));
     bullets.length = 0;
 
-    // Remove existing enemies
     enemies.forEach(enemy => {
         enemy.userData.bullets.forEach(bullet => scene.remove(bullet));
         scene.remove(enemy);
     });
     enemies.length = 0;
 
-    // Recreate enemies
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 15; i++) {
         const enemy = createEnemy(scene, asteroids, player);
         enemies.push(enemy);
     }
 
-    // Hide game over screen and unpause the game
     gameOverScreen.style.display = 'none';
     gamePaused = false;
 
-    // Resume animation
     animate();
 }
 
@@ -144,8 +137,8 @@ function updatePlayerLife() {
     addTemporaryRedLight(player);
     playerLives--;
     if (playerLives < 1) {
-        playerLives = 0; // Zabezpieczenie przed ujemnym życiem
-        endGame(); // Wywołanie końca gry
+        playerLives = 0; 
+        endGame(); 
     }
     updateLifeDisplay();
 }
@@ -159,7 +152,7 @@ function updateLifeDisplay(){
         if (index < playerLives) {
             span.innerHTML = svg;
         } else {
-            span.textContent = ''; // Ukrycie pustych slotów życia
+            span.textContent = '';
         }
     });
 }
@@ -169,26 +162,22 @@ function endGame() {
     explosionSound.volume = 1;
     explosionSound.play();
 
-    gamePaused = true; // Pauzowanie gry
-    gameOverScreen.style.display = 'flex'; // Wyświetlenie ekranu game over
+    gamePaused = true; 
+    gameOverScreen.style.display = 'flex';
 }
 
 function updatePlayerSpeed() {
 
-    // Definicja zmiennych globalnych (lub dostępnych w odpowiednim zakresie)
-    let targetCameraPositionZ = camera.position.z; // Inicjalnie ustawiamy docelową pozycję kamery na jej aktualną pozycję
-    const animationDuration = 700; // Czas trwania animacji w milisekundach
-    let animationStartTime = null; // Czas rozpoczęcia animacji
+    let targetCameraPositionZ = camera.position.z;
+    const animationDuration = 700;
+    let animationStartTime = null; 
 
     function startCameraAnimation(targetZ) {
-        // Ustawiamy nową docelową pozycję kamery
         targetCameraPositionZ = targetZ;
     
-        // Rozpoczynamy animację tylko jeśli zmienia się pozycja kamery
         if (camera.position.z !== targetCameraPositionZ) {
-            animationStartTime = performance.now(); // Ustalamy czas rozpoczęcia animacji
+            animationStartTime = performance.now(); 
     
-            // Rozpoczynamy animację przy użyciu requestAnimationFrame
             requestAnimationFrame(animateCameraPosition);
         }
     }
@@ -199,18 +188,16 @@ function updatePlayerSpeed() {
         }
     
         const elapsedTime = currentTime - animationStartTime;
-        const progress = Math.min(elapsedTime / animationDuration, 1); // Postęp animacji jako wartość z zakresu [0, 1]
+        const progress = Math.min(elapsedTime / animationDuration, 1);
     
-        // Interpolacja pozycji kamery
         const currentPositionZ = camera.position.z;
         const newPositionZ = currentPositionZ * (1 - progress) + targetCameraPositionZ * progress;
         camera.position.z = newPositionZ;
     
-        // Kontynuujemy animację, jeśli nie osiągnęliśmy jeszcze końca
         if (progress < 1) {
             requestAnimationFrame(animateCameraPosition);
         } else {
-            animationStartTime = null; // Resetujemy czas rozpoczęcia animacji po jej zakończeniu
+            animationStartTime = null; 
         }
     }
 
@@ -240,11 +227,10 @@ document.addEventListener('keyup', (event) => {
 });
 
 function animate() {
-    if (gamePaused) return; // Pauzowanie gry
+    if (gamePaused) return; 
 
     requestAnimationFrame(animate);
 
-    // Aktualizacja ruchu gracza
     player.translateZ(-playerSpeed);
 
     if (keys['ArrowUp'] || keys['KeyS']) {
@@ -270,10 +256,10 @@ function animate() {
         keys['Space'] = false;
     }
 
-    // Aktualizacja pozycji backgroundSphere
+    // Aktualizacja ruchu tła wraz z graczem
     backgroundSphere.position.copy(player.position);
 
-    // Aktualizacja ruchu pocisków
+    // Aktualizacja ruchu pocisków gracza
     bullets.forEach((bullet, index) => {
         bullet.translateZ(-2);
         if (bullet.position.z < -250) {
@@ -286,9 +272,9 @@ function animate() {
 
     // Strzelanie przeciwników
     enemies.forEach(enemy => {
-        if (!enemy.ready) return; // Jeśli model nie jest jeszcze gotowy, pomiń ten przeciwnik
+        if (!enemy.ready) return; // jeżeli nie gotowy to pomiń
 
-        if (now - enemy.userData.lastShot > 500 + Math.random() * 500) { // Randomize shooting intervals
+        if (now - enemy.userData.lastShot > 1000 + Math.random() * 1000) { // strzał losowo ale mniej więcej co sekunde
             enemy.shoot(camera);
             enemy.userData.lastShot = now;
         }
@@ -308,13 +294,9 @@ function animate() {
         });
     });
 
-    // Sprawdzenie kolizji
     checkCollisions();
-
-    // Renderowanie sceny
     renderer.render(scene, camera);
 }
 
 setupSoundtrack();
 animate();
-
