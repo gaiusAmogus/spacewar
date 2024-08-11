@@ -297,6 +297,30 @@ function animate() {
     checkCollisions();
     renderer.render(scene, camera);
 }
+function setupTouchControls() {
+    const upButton = document.getElementById('up');
+    const downButton = document.getElementById('down');
+    const leftButton = document.getElementById('left');
+    const rightButton = document.getElementById('right');
+    const shootButton = document.getElementById('shoot');
+
+    // Obsługa dotykowa
+    downButton.addEventListener('touchstart', () => keys['ArrowUp'] = true);
+    downButton.addEventListener('touchend', () => keys['ArrowUp'] = false);
+
+    upButton.addEventListener('touchstart', () => keys['ArrowDown'] = true);
+    upButton.addEventListener('touchend', () => keys['ArrowDown'] = false);
+
+    leftButton.addEventListener('touchstart', () => keys['ArrowLeft'] = true);
+    leftButton.addEventListener('touchend', () => keys['ArrowLeft'] = false);
+
+    rightButton.addEventListener('touchstart', () => keys['ArrowRight'] = true);
+    rightButton.addEventListener('touchend', () => keys['ArrowRight'] = false);
+
+    shootButton.addEventListener('touchstart', () => keys['Space'] = true);
+    shootButton.addEventListener('touchend', () => keys['Space'] = false);
+}
 
 setupSoundtrack();
+setupTouchControls();
 animate();
